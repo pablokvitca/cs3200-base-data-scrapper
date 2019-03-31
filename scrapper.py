@@ -11,8 +11,8 @@ import re
 def visitSubject(term, subject):
     # interpolate term, subject, start_num, and end_num
     BASE_URL = """
-    https://wl11gp.neu.edu/udcprod8/bwckctlg.p_display_courses?term_in={0}&one_subj={1}&sel_crse_strt={2}&sel_crse_end={3}&sel_subj=&sel_levl=&sel_schd=&sel_coll=&sel_divs=&sel_dept=&sel_attr="
-    """.format(term, subject, "0000", "9999")
+        https://wl11gp.neu.edu/udcprod8/bwckctlg.p_display_courses?term_in={0}&one_subj={1}&sel_crse_strt={2}&sel_crse_end={3}&sel_subj=&sel_levl=&sel_schd=&sel_coll=&sel_divs=&sel_dept=&sel_attr="
+        """.format(term, subject, "0000", "9999")
     # query the website and return the html to the variable 'page'
     page = urlopen(BASE_URL)
     # parse the html using beautiful soup and store in variable 'soup'
@@ -24,6 +24,12 @@ def visitSubject(term, subject):
     # find the 'sections found' table on the content
     courses_table = content.find('table', attrs={
         'summary': 'This table lists all course detail for the selected term.'})
+
+    if (str(type(courses_table)) == "<class 'NoneType'>"):
+        print("No courses found for subject {1} during term {0}".format(
+            term, subject))
+        return []
+
     courses = courses_table.findAll("tr")
     processed_courses = []
     header = ""
@@ -96,10 +102,10 @@ def makeCourse(header, main):
 
 
 def run(term):
-    print("RUNNING WEB CHECK (VERION 1)")
+    print("RUNNING WEB CHECK (VERSION 2)")
     print("START TIME: %(timestamp)s" % {"timestamp": datetime.now()})
     print("------------------------------------------------------------------")
-    found_courses = visitSubject(term, "DS")
+    found_courses = visitSubject(term, "AI")
     for c in found_courses:
         procedure = """
             CALL create_class_procedure('{0}', {1}, '{2}', '{3}', '{4}', {5});
