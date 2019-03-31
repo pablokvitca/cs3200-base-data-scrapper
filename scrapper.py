@@ -4,6 +4,8 @@ from datetime import datetime
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import re
+import sqlalchemy
+from sqlalchemy import create_engine
 
 ####################################################
 
@@ -101,11 +103,50 @@ def makeCourse(header, main):
     return {**header, **main}
 
 
+def connect_DB():
+    print('Trying to connect to database...')
+    settings = {
+        # The name of the MySQL account to use (or empty for anonymous)
+        'userName': "root",
+        # The password for the MySQL account (or empty for anonymous)
+        'password': "rycbar12345",
+        'serverName': "127.0.0.1",    # The name of the computer running MySQL
+        # The port of the MySQL server (default is 3306)
+        'portNumber': 3306,
+        # The name of the database we are testing with (this default is installed with MySQL)
+        'dbName': "projectcs3200",
+    }
+    db_engine = create_engine(
+        'mysql+mysqldb://{0[userName]}:{0[password]}@{0[serverName]}:{0[portNumber]}/{0[dbName]}'.format(settings))
+    db_conn = db_engine.connect()
+    print('Connected to database.')
+    return db_conn
+
+
 def run(term):
-    print("RUNNING WEB CHECK (VERSION 2)")
+    print("RUNNING WEB CHECK (VERSION 3)")
     print("START TIME: %(timestamp)s" % {"timestamp": datetime.now()})
     print("------------------------------------------------------------------")
-    found_courses = visitSubject(term, "AI")
+
+    db_conn = connect_DB()
+
+    get_all_departments = "SELECT * FROM department"
+
+    depts = db_conn.execute(get_all_departments)
+
+    found_courses = []
+    prev_l = 0
+
+    for dept in depts:
+        print("-------")
+        print("Looking for courses on: {0} ({1})".format(
+            dept["long_name"], dept["short_name"]))
+        found_courses = found_courses + visitSubject(term, dept["short_name"])
+        print("Found {0} courses of {1} so far".format(
+            len(found_courses) - prev_l, len(found_courses)))
+        prev_l = len(found_courses)
+        print("-------")
+
     for c in found_courses:
         procedure = """
             CALL create_class_procedure('{0}', {1}, '{2}', '{3}', '{4}', {5});
@@ -116,8 +157,7 @@ def run(term):
             c["course_name"],    # {3} : name
             c["course_desc"],    # {4} : description
             c["credits"])        # {5} : credit_hours
-
-        print(procedure)
+        db_conn.execute(procedure)
     print("------------------------------------------------------------------")
     print("END TIME: %(timestamp)s" % {"timestamp": datetime.now()})
 
