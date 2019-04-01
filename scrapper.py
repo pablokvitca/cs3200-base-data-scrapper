@@ -73,6 +73,14 @@ def remove_whitespace(s):
     return s.strip()
 
 
+def findIndexOfPartContaining(arr, targets):
+    for i in range(len(arr)):
+        for target in targets:
+            if target in arr[i]:
+                return i
+    return -1
+
+
 def processMain(main):
     main_contents = main.td.contents
 
@@ -81,19 +89,32 @@ def processMain(main):
     description = description.encode('ascii', 'ignore')
     description = description.decode('ascii')
 
-    index_offset = 0
-    if "Coreq" in main_contents[1].text:
-        index_offset = 2
+    index_offset = findIndexOfPartContaining(
+        main_contents, ['Credit hours', 'Units']) - 2
 
-    credit_hours = cleanup(main_contents[2 + index_offset])
-    credit_hours = remove_whitespace(credit_hours)
+    try:
+        credit_hours = cleanup(main_contents[2 + index_offset])
+        credit_hours = remove_whitespace(credit_hours)
+        try:
+            if (credit_hours == "1.000 TO     4.000 Credit hours"):
+                credit_hours = 4
+            else:
+                credit_hours = int(math.ceil(float(credit_hours[0:3])))
+        except:
+            credit_hours = 4
+    except:
+        credit_hours = 0
 
-    if (credit_hours == "1.000 TO     4.000 Credit hours"):
-        credit_hours = 4
-    else:
-        credit_hours = int(math.ceil(float(credit_hours[0:3])))
+    if (findIndexOfPartContaining(main_contents, ["Lecture", "Lab"]) == -1):
+        index_offset = index_offset - 2
 
-    class_level = remove_whitespace(cleanup(main_contents[10 + index_offset]))
+    try:
+        class_level = remove_whitespace(
+            cleanup(main_contents[10 + index_offset]))
+    except:
+        print("description:", description)
+        print(10 + index_offset)
+        print(asd)
 
     course_attributes = ""
     try:
@@ -148,34 +169,8 @@ def get_DB():
     return db_engine
 
 
-def run(term):
-    print("RUNNING WEB CHECK (VERSION 4)")
-    print("START TIME: %(timestamp)s" % {"timestamp": datetime.now()})
-    print("------------------------------------------------------------------")
-
-    db_conn = connect_DB()
-
-    get_all_departments = "SELECT * FROM department"
-
-    # depts = db_conn.execute(get_all_departments)
-    depts = [{"long_name": 'Computer Sciences',
-              "short_name": "CS", "college_id": 5}]
-    found_courses = []
-    prev_l = 0
-
-    for dept in depts:
-        print("-------")
-        print("Looking for courses on: {0} ({1})".format(
-            dept["long_name"], dept["short_name"]))
-        found_courses = found_courses + visitSubject(term, dept["short_name"])
-        print("Found {0} courses of {1} so far".format(
-            len(found_courses) - prev_l, len(found_courses)))
-        prev_l = len(found_courses)
-        print("-------")
-
-    db_conn.execute('SET NAMES utf8;')
-    db_conn.execute('SET CHARACTER SET utf8;')
-    db_conn.execute('SET character_set_connection=utf8;')
+def create_classes(found_courses):
+    print("PREPARING TO CREATE {0} CLASSES".format(len(found_courses)))
 
     for c in found_courses:
         db_conn = get_DB().raw_connection()
@@ -188,12 +183,51 @@ def run(term):
             db_conn.commit()
         except UnicodeEncodeError:
             print(c)
-        except exc.IntegrityError:
+        except:
             continue
+            # print("ERROR ON CLASS CREATION ------------------")
+            # print("class number:", c['course_number'])
+            # print("class level:", c['class_level'])
+            # raise Exception("ERROR ON CLASS CREATION")
         finally:
             db_conn.close()
+    print("OFFLOADED {0} CLASSES".format(len(found_courses)))
+
+
+def run(term, startDept):
+    print("RUNNING WEB CHECK (VERSION 10)")
+    print("START TIME: %(timestamp)s" % {"timestamp": datetime.now()})
+    print("------------------------------------------------------------------")
+
+    db_conn = connect_DB()
+
+    get_all_departments = "SELECT * FROM department WHERE short_name >= '{0}'".format(
+        startDept)
+
+    depts = db_conn.execute(get_all_departments)
+    found_courses = []
+    total_proccessed = 0
+
+    for dept in depts:
+        print("Looking for courses on: {0} ({1})".format(
+            dept["long_name"], dept["short_name"]))
+        found_courses = found_courses + visitSubject(term, dept["short_name"])
+        print("CURRENT: {0}; TOTAL: {1}; COMMITED: {2}".format(
+            len(found_courses), total_proccessed, total_proccessed - len(found_courses)))
+        total_proccessed = total_proccessed + len(found_courses)
+        create_classes(found_courses)
+        found_courses = []
+        print("CURRENT: {0}; TOTAL: {1}".format(
+            len(found_courses), total_proccessed, total_proccessed))
+
     print("------------------------------------------------------------------")
     print("END TIME: %(timestamp)s" % {"timestamp": datetime.now()})
 
 
-run("202010")
+def run_all(terms):
+    for term in terms:
+        print("RUNNING FOR TERM {0}".format(term))
+        run(term, "AAAA")
+
+
+run_all(["202010", "201940", "201960", "201950", "201930"])
