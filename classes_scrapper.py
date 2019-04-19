@@ -1,12 +1,16 @@
 # import libraries
-import smtplib
+import os
+import re
 from datetime import datetime
 from urllib.request import urlopen
-from bs4 import BeautifulSoup
-import re
+
 import math
-import sqlalchemy
-from sqlalchemy import create_engine, types, exc
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+
+load_dotenv(override=True)
+
 
 ####################################################
 
@@ -147,15 +151,12 @@ def connect_db():
 
 def get_db():
     settings = {
-        # The name of the MySQL account to use (or empty for anonymous)
-        'userName': "root",
-        # The password for the MySQL account (or empty for anonymous)
-        'password': "rycbar12345",
-        'serverName': "127.0.0.1",    # The name of the computer running MySQL
-        # The port of the MySQL server (default is 3306)
-        'portNumber': 3306,
+        'userName': os.getenv("DB_USERNAME"),  # The name of the MySQL account to use (or empty for anonymous)
+        'password': os.getenv("DB_PASSWORD"),  # The password for the MySQL account (or empty for anonymous)
+        'serverName': os.getenv("DB_SERVER"),  # The name of the computer running MySQL
+        'portNumber': os.getenv("DB_PORT"),  # The port of the MySQL server (default is 3306)
+        'dbName': os.getenv("DB_NAME"),
         # The name of the database we are testing with (this default is installed with MySQL)
-        'dbName': "projectcs3200",
     }
     db_engine = create_engine(
         'mysql+mysqldb://{0[userName]}:{0[password]}@{0[serverName]}:{0[portNumber]}/{0[dbName]}'.format(settings))
@@ -170,7 +171,8 @@ def create_classes(found_courses):
         try:
             cursor = db_conn.cursor()
             cursor.callproc("create_class_procedure", [
-                            c["course_dept"], c["course_number"], c["class_level"], c["course_name"], c["course_desc"], c["credits"]])
+                c["course_dept"], c["course_number"], c["class_level"], c["course_name"], c["course_desc"],
+                c["credits"]])
             results = list(cursor.fetchall())
             cursor.close()
             db_conn.commit()

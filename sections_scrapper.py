@@ -1,12 +1,16 @@
 # import libraries
+import os
 import re
 from datetime import datetime
 from urllib.request import urlopen
 
 from bs4 import BeautifulSoup, NavigableString, Tag
+from dotenv import load_dotenv
 from pymysql import err
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+
+load_dotenv(override=True)
 
 
 ####################################################
@@ -321,11 +325,11 @@ def connect_db():
 
 def get_db() -> Engine:
     settings = {
-        'userName': "root",  # The name of the MySQL account to use (or empty for anonymous)
-        'password': "rycbar12345",  # The password for the MySQL account (or empty for anonymous)
-        'serverName': "127.0.0.1",  # The name of the computer running MySQL
-        'portNumber': 3306,  # The port of the MySQL server (default is 3306)
-        'dbName': "projectcs3200",
+        'userName': os.getenv("DB_USERNAME"),  # The name of the MySQL account to use (or empty for anonymous)
+        'password': os.getenv("DB_PASSWORD"),  # The password for the MySQL account (or empty for anonymous)
+        'serverName': os.getenv("DB_SERVER"),  # The name of the computer running MySQL
+        'portNumber': os.getenv("DB_PORT"),  # The port of the MySQL server (default is 3306)
+        'dbName': os.getenv("DB_NAME"),
         # The name of the database we are testing with (this default is installed with MySQL)
     }
     db_engine: Engine = create_engine(
