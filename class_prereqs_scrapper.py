@@ -56,7 +56,7 @@ class Prereq(object):
 
     def add_class(self, c):
         try:
-            while '<<CLASS>' in c:
+            while '<CLASS>' in c:
                 c = re.sub(r'(.*?)<CLASS>', '', c, 1)
                 c = re.sub(r'<CLASS>(.*?)', '', c, 1)
             c = c.split()
@@ -354,6 +354,14 @@ def std_prereq_str(prereqs_str):
     for s in prereqs_str.split():
         if contains_valid(s, valid_strs):
             res.append(s)
+    open_parens = True
+    for i in range(len(res)):
+        if '<CLASS>' in res[i]:
+            if open_parens:
+                res[i] = "(" + res[i]
+            else:
+                res[i] = res[i] + ")"
+            open_parens = not open_parens
     return " ".join(res)
 
 
